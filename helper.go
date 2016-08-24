@@ -83,6 +83,22 @@ func appDefinition() (app *cli.App) {
 				},
 			},
 		},
+		{
+			Name:  "clear-environment",
+			Usage: "Unset all the credential-related AWS environment variables.",
+			Subcommands: []cli.Command{
+				{
+					Name:   "in-new-shell",
+					Usage:  "Get a new shell without any credential-related AWS environment variables.",
+					Action: sts.ClearAwsEnvironmentInNewShell,
+				},
+				{
+					Name:   "and-show-unset",
+					Usage:  "Print out the environment variable 'unset' commands to issue to remove AWS credential-related environment variables.",
+					Action: sts.ClearAwsEnvironmentAndReturnUnsetEnvironment,
+				},
+			},
+		},
 	}
 
 	app.Flags = []cli.Flag{

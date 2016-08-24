@@ -34,7 +34,7 @@ func GetTokenAndSetEnvironment(c *cli.Context) error {
 	resp := getToken(c)
 
 	setEnvironmentFromStsReponse(resp)
-	syscall.Exec(os.Getenv("SHELL"), []string{os.Getenv("SHELL")}, syscall.Environ())
+	openNewShell()
 
 	return nil
 }
@@ -45,6 +45,23 @@ func GetTokenAndReturnExportEnvironment(c *cli.Context) error {
 
 	log.Info("Run this command wrapped in 'exec $(aws-sts-helper get-token ...)' to automatically set your AWS environment variables.")
 	fmt.Println(getSetEnvironmentString(resp))
+
+	return nil
+}
+
+func ClearAwsEnvironmentInNewShell(c *cli.Context) error {
+
+	clearAwsEnvironment()
+	log.Info("AWS environment variables unset")
+	openNewShell()
+
+	return nil
+}
+
+func ClearAwsEnvironmentAndReturnUnsetEnvironment(c *cli.Context) error {
+
+	log.Info("Run this command wrapped in 'exec $(aws-sts-helper clear-environment ...)' to automatically set your AWS environment variables.")
+	fmt.Println(getUnsetEnvironmentString())
 
 	return nil
 }
@@ -126,6 +143,15 @@ func getExportEnvironmentString(key string, value string) string {
 	return fmt.Sprintf("export %s=%s", key, value)
 }
 
+func getUnsetEnvironmentString() string {
+
+	unsetCmds := make([]string, len(envAwsVariables))
+	for _, variable := range envAwsVariables {
+		unsetCmds = append(unsetCmds, fmt.Sprintf("unset %s", variable))
+	}
+	return strings.Join(unsetCmds, "\n")
+}
+
 func getRandomSessionName() string {
 
 	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -134,4 +160,8 @@ func getRandomSessionName() string {
 		result[i] = chars[rand.Intn(len(chars))]
 	}
 	return fmt.Sprintf("aws-sts-helper-%s", string(result))
+}
+
+func openNewShell() {
+	syscall.Exec(os.Getenv("SHELL"), []string{os.Getenv("SHELL")}, syscall.Environ())
 }
