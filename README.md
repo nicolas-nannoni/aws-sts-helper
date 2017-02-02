@@ -16,11 +16,12 @@ Then, to get a shell with the proper environment variables assuming the role in 
 ```shell
 aws-sts-helper get-token --mfa-arn $MFA_ARN \
                          --role-arn $ROLE_ARN \
-                         --token-code <TOKEN-CODE-FROM-YOUR-MFA-DEVICE> \
                          in-new-shell
 ```
 
-If you want to add the variables to your existing shell instead:
+You will get prompted for your MFA token code. Enter it and a new shell with the proper environment variables set will be spawned.
+
+If you want to add the variables to your existing shell instead, you have to pass your MFA token code directly in the command invocation:
 ```shell
 eval $(aws-sts-helper get-token --mfa-arn $MFA_ARN \
                                 --role-arn $ROLE_ARN \
