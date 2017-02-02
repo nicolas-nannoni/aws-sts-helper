@@ -8,7 +8,7 @@ export GOPATH
 
 BINARY=./bin/aws-sts-helper
 
-VERSION=0.0.1
+VERSION=1.0.0
 BUILD=`git rev-parse HEAD`
 
 LDFLAGS=-ldflags "-X main.Version=${VERSION} -X main.Build=${BUILD}"

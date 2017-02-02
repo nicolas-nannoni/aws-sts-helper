@@ -1,6 +1,9 @@
 # AWS STS (Security Token Service) Helper #
 Never set environment variables yourself anymore when using _AssumeRole_ and temporary credentials from [STS](https://www.google.se/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwiz1tTdicjOAhWBGywKHQyzCGMQFggdMAA&url=http%3A%2F%2Fdocs.aws.amazon.com%2FSTS%2Flatest%2FAPIReference%2FWelcome.html&usg=AFQjCNHIkvYM6R9tkhrAsp4O9fHqjr0nTw) (Amazon Security Token Service).
 
+## Download ##
+Precompiled binaries are available for Linux and macOS. Check the [latest release](https://github.com/nicolas-nannoni/aws-sts-helper/releases/latest).
+
 ## Quick start ##
 Set the following environment variables to the values you use the most:
 
