@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/urfave/cli"
+	"github.com/segmentio/go-prompt"
 )
 
 const (
@@ -43,7 +44,7 @@ func GetTokenAndReturnExportEnvironment(c *cli.Context) error {
 
 	resp := getToken(c)
 
-	log.Info("Run this command wrapped in 'exec $(aws-sts-helper get-token ...)' to automatically set your AWS environment variables.")
+	log.Info("Run this command wrapped in 'eval $(aws-sts-helper get-token ...)' to automatically set your AWS environment variables.")
 	fmt.Println(getSetEnvironmentString(resp))
 
 	return nil
@@ -60,7 +61,7 @@ func ClearAwsEnvironmentInNewShell(c *cli.Context) error {
 
 func ClearAwsEnvironmentAndReturnUnsetEnvironment(c *cli.Context) error {
 
-	log.Info("Run this command wrapped in 'exec $(aws-sts-helper clear-environment ...)' to automatically set your AWS environment variables.")
+	log.Info("Run this command wrapped in 'eval $(aws-sts-helper clear-environment ...)' to automatically set your AWS environment variables.")
 	fmt.Println(getUnsetEnvironmentString())
 
 	return nil
@@ -87,7 +88,7 @@ func getToken(c *cli.Context) *sts.AssumeRoleOutput {
 	if config.Config.MfaArn != "" {
 		log.Debugf("Using MFA device with serial %s and token code %s", config.Config.MfaArn, config.Config.MfaTokenCode)
 		params.SerialNumber = aws.String(config.Config.MfaArn)
-		params.TokenCode = aws.String(config.Config.MfaTokenCode)
+		params.TokenCode = aws.String(getMfaToken())
 	}
 	resp, err := svc.AssumeRole(params)
 
@@ -98,6 +99,16 @@ func getToken(c *cli.Context) *sts.AssumeRoleOutput {
 	log.Infof("Token successfully received!\n%s", resp.GoString())
 
 	return resp
+}
+
+func getMfaToken() string {
+
+	if config.Config.MfaTokenCode != "" {
+		return config.Config.MfaTokenCode
+	}
+
+	log.Debugf("No token code passed in command invocation while --mfa-arn is provided: requesting MFA token interactively")
+	return prompt.StringRequired("Please type in your MFA code")
 }
 
 func clearAwsEnvironment() {
