@@ -1,19 +1,19 @@
 package sts
 
 import (
-	"../config"
 	"fmt"
 	"math/rand"
 	"os"
 	"strings"
 	"syscall"
 
+	"../config"
 	log "github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/urfave/cli"
 	"github.com/segmentio/go-prompt"
+	"github.com/urfave/cli"
 )
 
 const (
@@ -123,10 +123,10 @@ func clearAwsEnvironment() {
 
 func setEnvironmentFromStsReponse(resp *sts.AssumeRoleOutput) {
 
-	log.Debugf("Setting environment variables (%s, %s, %s) based on STS output: %s", envAwsAccessKey, envAwsSecretKey, envAwsSessionToken, resp)
+	log.Debugf("Setting environment variables (%s, %s, %s) based on STS output: %s", envAwsAccessKeyId, envAwsSecretAccessKey, envAwsSessionToken, resp)
 
-	setEnvironmentVariable(envAwsAccessKey, *resp.Credentials.AccessKeyId)
-	setEnvironmentVariable(envAwsSecretKey, *resp.Credentials.SecretAccessKey)
+	setEnvironmentVariable(envAwsAccessKeyId, *resp.Credentials.AccessKeyId)
+	setEnvironmentVariable(envAwsSecretAccessKey, *resp.Credentials.SecretAccessKey)
 	setEnvironmentVariable(envAwsSessionToken, *resp.Credentials.SessionToken)
 
 	log.Debugf("Environment: %s", os.Environ())
