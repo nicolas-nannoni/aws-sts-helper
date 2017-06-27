@@ -32,6 +32,18 @@ eval $(aws-sts-helper get-token --mfa-arn $MFA_ARN \
                                 and-show-export)
 ```
 
+### Credential server ###
+It may be useful to serve the temporary credentials retrieved from STS over HTTP as if the credentials came from an 
+[EC2 instance metadata](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html) endpoint. Some 
+applications such as [Cyberduck](https://trac.cyberduck.io/wiki/help/en/howto/s3) do not support temporary credentials 
+by default but can fetch them from an HTTP endpoint exposing them as an EC2 instance would.
+
+To start a web server serving the the credentials as JSON on port 3000 under `/credentials`:
+```shell
+aws-sts-helper get-token --mfa-arn $MFA_ARN \
+                         --role-arn $ROLE_ARN \
+                         and-serve-via-http
+```
 
 ## Help ##
 It is built into the program:
