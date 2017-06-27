@@ -1,13 +1,12 @@
 package main
 
 import (
-	"./config"
-	"./sts"
-
 	"math/rand"
 	"os"
 	"time"
 
+	"./config"
+	"./sts"
 	log "github.com/Sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -60,6 +59,25 @@ func appDefinition() (app *cli.App) {
 					Name:   "and-show-export",
 					Usage:  "Get new temporary STS credentials and print out the environment variable 'export' commands to use them.",
 					Action: sts.GetTokenAndReturnExportEnvironment,
+				},
+				{
+					Name:   "and-serve-via-http",
+					Usage:  "Get new temporary STS credentials and start an HTTP server serving the retrieved credentials for use by application compatible with EC2 IAM role retrieval (e.g. Cyberduck).",
+					Action: sts.GetTokenAndServeOverHttp,
+					Flags: []cli.Flag{
+						cli.IntFlag{
+							Name:        "port",
+							Value:       3000,
+							Usage:       "The port on which the HTTP server should expose the temporary credentials.",
+							Destination: &config.Config.HttpPort,
+						},
+						cli.StringFlag{
+							Name:        "path",
+							Value:       "/credentials",
+							Usage:       "The URL path at which the HTTP server should expose the temporary credentials.",
+							Destination: &config.Config.HttpPath,
+						},
+					},
 				},
 			},
 			Flags: []cli.Flag{

@@ -6,14 +6,17 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"time"
 
 	"../config"
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/segmentio/go-prompt"
 	"github.com/urfave/cli"
+	"net/http"
+	json2 "encoding/json"
 )
 
 const (
@@ -47,6 +50,14 @@ func GetTokenAndReturnExportEnvironment(c *cli.Context) error {
 	log.Info("Run this command wrapped in 'eval $(aws-sts-helper get-token ...)' to automatically set your AWS environment variables.")
 	fmt.Println(getSetEnvironmentString(resp))
 
+	return nil
+}
+
+func GetTokenAndServeOverHttp(c *cli.Context) error {
+
+	resp := getToken(c)
+
+	startHttpServerWithToken(resp)
 	return nil
 }
 
@@ -175,4 +186,41 @@ func getRandomSessionName() string {
 
 func openNewShell() {
 	syscall.Exec(os.Getenv("SHELL"), []string{os.Getenv("SHELL")}, syscall.Environ())
+}
+
+func startHttpServerWithToken(token *sts.AssumeRoleOutput) error {
+
+	iamBody := IamRoleResponse{
+		Code:            "Success",
+		LastUpdate:      time.Now().Format(time.RFC3339),
+		Type:            "AWS-HMAC",
+		AccessKeyId:     *token.Credentials.AccessKeyId,
+		SecretAccessKey: *token.Credentials.SecretAccessKey,
+		Token:           *token.Credentials.SessionToken,
+		Expiration:      (*token.Credentials.Expiration).Format(time.RFC3339),
+	}
+
+	json, err := json2.Marshal(iamBody)
+	if err != nil {
+		return fmt.Errorf("Unable to convert the STS credentials into a JSON EC2 IAM Role output: %s", err)
+	}
+
+	log.Infof("Starting server on port %d, exposing credentials at %s", config.Config.HttpPort, config.Config.HttpPath)
+
+	http.HandleFunc(config.Config.HttpPath, serveCredentials(json))
+	http.ListenAndServe(fmt.Sprintf("localhost:%d", config.Config.HttpPort), nil)
+
+	return nil
+}
+
+func serveCredentials(jsonIamBody []byte) (func(http.ResponseWriter, *http.Request)) {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		log.Infof("Received credentials request: %s", r.UserAgent())
+		log.Debugf("Received request: %s", *r)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonIamBody)
+	}
 }

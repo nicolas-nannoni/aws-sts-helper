@@ -9,6 +9,9 @@ type ConfigEntries struct {
 	MfaArn       string
 	MfaTokenCode string
 
+	HttpPort int
+	HttpPath string
+
 	Debug              bool
 	KeepAwsEnvironment bool
 }
