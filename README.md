@@ -62,8 +62,8 @@ It is built into the program:
 
 ## How to build and run? ##
 
-    git clone git@github.com:nicolas-nannoni/aws-sts-helper.git
-    go get
+    go get github.com/nicolas-nannoni/aws-sts-helper
+    cd $GOPATH/src/github.com/nicolas-nannoni/aws-sts-helper
     make
 
 Binaries will be in the `bin` folder
@@ -75,13 +75,8 @@ Binaries will be in the `bin` folder
 
 On Linux:
 
-    ./bin/aws-sts-helper-linux
+    ./bin/aws-sts-helper-linux-amd64
 
 On Mac:
 
-    ./bin/aws-sts-helper-osx
-
-
-Or to just run it without building:
-
-    make run
+    ./bin/aws-sts-helper-osx-amd64
