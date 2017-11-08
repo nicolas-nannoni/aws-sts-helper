@@ -5,16 +5,16 @@ import (
 	"os"
 	"time"
 
-	"./config"
-	"./sts"
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
+	"github.com/nicolas-nannoni/aws-sts-helper/config"
+	"github.com/nicolas-nannoni/aws-sts-helper/sts"
 	"github.com/urfave/cli"
 )
 
 // App build information
 var (
-	Version string
-	Build   string
+	AppVersion string
+	AppBuild   string
 )
 
 func initApp(c *cli.Context) error {
@@ -36,14 +36,14 @@ func appDefinition() (app *cli.App) {
 	app = cli.NewApp()
 	app.Name = "aws-sts-helper"
 	app.Authors = []cli.Author{
-		cli.Author{
+		{
 			Name:  "Nicolas Nannoni",
 			Email: "nannoni@kth.se",
 		},
 	}
 	app.Usage = "Tool to make your life easier when using Amazon STS (Security Token Service)."
 	app.Before = initApp
-	app.Version = Version + " (build " + Build + ")"
+	app.Version = AppVersion + " (build " + AppBuild + ")"
 
 	app.Commands = []cli.Command{
 		{

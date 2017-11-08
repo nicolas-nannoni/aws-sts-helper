@@ -1,60 +1,33 @@
-.PHONY: build fmt lint run test vendor_clean vendor_get vendor_update vet list
+.PHONY: all run build clean vet test package
 
-# Prepend our _vendor directory to the system GOPATH
-# so that import path resolution will prioritize
-# our third party snapshots.
-GOPATH := ${PWD}/_vendor:${GOPATH}
-export GOPATH
+APP_NAME=aws-sts-helper
+APP_BUILD=`git log --pretty=format:'%h' -n 1`
 
-BINARY=./bin/aws-sts-helper
+APP_VERSION=1.2.0
 
-VERSION=1.2.0
-BUILD=`git rev-parse HEAD`
+GO_FLAGS= CGO_ENABLED=0
+GO_LDFLAGS= -ldflags="-X main.AppVersion=$(APP_VERSION) -X main.AppName=$(APP_NAME) -X main.AppBuild=$(APP_BUILD)"
+GO_BUILD_CMD=$(GO_FLAGS) go build $(GO_LDFLAGS)
+BUILD_DIR=bin
+BINARY_NAME=aws-sts-helper
 
-LDFLAGS=-ldflags "-X main.Version=${VERSION} -X main.Build=${BUILD}"
+all: clean build package
 
-.DEFAULT_GOAL: build
-
-build:
-	go build ${LDFLAGS} -o ${BINARY} ./*.go
-
-run: build
-	${BINARY}
-
-osx:
-	GOOS="darwin" GOARCH="amd64" go build ${LDFLAGS} -o ${BINARY}-osx ./*.go
-
-linux:
-	GOOS="linux" GOARCH="amd64" go build ${LDFLAGS} -o ${BINARY}-linux ./*.go
-
-windows:
-	GOOS="windows" GOARCH="amd64" go build ${LDFLAGS} -o ${BINARY}.exe ./*.go
-
-# http://golang.org/cmd/go/#hdr-Run_gofmt_on_package_sources
-fmt:
-	go fmt ./...
-
-# https://github.com/golang/lint
-# go get github.com/golang/lint/golint
-lint:
-	golint ./src
+vet:
+	@go vet
 
 test:
-	go test ./...
+	@go test
 
-install:
-	go install ${LDFLAGS} -o ${BINARY} ./*.go
+build: vet test
+	@mkdir -p $(BUILD_DIR)
+	GOOS=linux GOARCH=amd64 $(GO_BUILD_CMD) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64
+	GOOS=darwin GOARCH=amd64 $(GO_BUILD_CMD) -o $(BUILD_DIR)/$(BINARY_NAME)-osx-amd64
+
+package:
+	tar -C $(BUILD_DIR) -zcf $(BUILD_DIR)/$(BINARY_NAME)-$(APP_VERSION)-linux-amd64.tar.gz $(BINARY_NAME)-linux-amd64
+	tar -C $(BUILD_DIR) -zcf $(BUILD_DIR)/$(BINARY_NAME)-$(APP_VERSION)-osx-amd64.tar.gz $(BINARY_NAME)-osx-amd64
 
 clean:
-	if [ -f ${BINARY} ] ; then rm ${BINARY} ; fi
-	if [ -f ${BINARY}-osx ] ; then rm ${BINARY}-osx ; fi
-	if [ -f ${BINARY}-linux ] ; then rm ${BINARY}-linux ; fi
-	if [ -f ${BINARY}-windows ] ; then rm ${BINARY}-windows ; fi
+	rm -Rf $(BUILD_DIR)
 
-list:
-		@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' | sort | egrep -v -e '^[^[:alnum:]]' -e '^$@$$' | xargs
-
-# http://godoc.org/code.google.com/p/go.tools/cmd/vet
-# go get code.google.com/p/go.tools/cmd/vet
-vet:
-	go vet ./*

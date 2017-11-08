@@ -13,7 +13,9 @@ MFA_ARN=arn:aws:iam::123456789:mfa/YourUser   # The MFA (Multi-Factor Authentica
                                                 if the role you want to assume requires it
 ```
 
-Make sure that your main AWS credentials information are [properly set](http://docs.aws.amazon.com/java-sdk/latest/developer-guide/credentials.html#id6). Passing your Access Key and Secret Key as environment variables require the use of the `--keep-aws-environment` (otherwise, these variables get cleared before requesting the token, to avoid reusing previous temporary credentials).
+Make sure that your main AWS credentials information is [properly set](http://docs.aws.amazon.com/java-sdk/latest/developer-guide/credentials.html#id6). 
+Passing your Access Key and Secret Key as environment variables requires the use of the `--keep-aws-environment` (otherwise, 
+these variables get cleared before requesting the token, to avoid reusing previous temporary credentials).
 
 Then, to get a shell with the proper environment variables assuming the role in `ROLE_ARN` and using and MFA device:
 ```shell
@@ -23,6 +25,11 @@ aws-sts-helper get-token --mfa-arn $MFA_ARN \
 ```
 
 You will get prompted for your MFA token code. Enter it and a new shell with the proper environment variables set will be spawned.
+
+To have a convenient shortcut to that command, you can register an alias in your `.bash_profile` or equivalent:
+```
+alias sts-shell-somerole="<path>/aws-sts-helper-osx-amd64 get-token --mfa-arn $MFA_ARN --role-arn $ROLE_ARN in-new-shell"
+```
 
 If you want to add the variables to your existing shell instead, you have to pass your MFA token code directly in the command invocation:
 ```shell
@@ -45,6 +52,8 @@ aws-sts-helper get-token --mfa-arn $MFA_ARN \
                          and-serve-via-http
 ```
 
+You can customise the port and the endpoint via `--port` and `--path`.
+
 ## Help ##
 It is built into the program:
 
@@ -63,7 +72,6 @@ Binaries will be in the `bin` folder
 
     make linux
     make osx
-    make windows
 
 On Linux:
 
@@ -73,9 +81,6 @@ On Mac:
 
     ./bin/aws-sts-helper-osx
 
-On Windows:
-
-    ./bin/aws-sts-helper.exe
 
 Or to just run it without building:
 
