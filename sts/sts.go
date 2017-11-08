@@ -3,20 +3,22 @@ package sts
 import (
 	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
 	"strings"
 	"syscall"
 	"time"
 
-	"../config"
-	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/segmentio/go-prompt"
-	"github.com/urfave/cli"
-	"net/http"
+
 	json2 "encoding/json"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/nicolas-nannoni/aws-sts-helper/config"
+	"github.com/urfave/cli"
 )
 
 const (
