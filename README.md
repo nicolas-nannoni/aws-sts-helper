@@ -2,7 +2,8 @@
 Never set environment variables yourself anymore when using _AssumeRole_ and temporary credentials from [STS](https://www.google.se/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwiz1tTdicjOAhWBGywKHQyzCGMQFggdMAA&url=http%3A%2F%2Fdocs.aws.amazon.com%2FSTS%2Flatest%2FAPIReference%2FWelcome.html&usg=AFQjCNHIkvYM6R9tkhrAsp4O9fHqjr0nTw) (Amazon Security Token Service).
 
 ## Download ##
-Precompiled binaries are available for Linux and macOS. Check the [latest release](https://github.com/nicolas-nannoni/aws-sts-helper/releases/latest).
+Precompiled binaries are available for Linux, macOS and Windows (note: I do not test it on Windows, shell operations support must be limited, but it has been [reported to work](https://github.com/nicolas-nannoni/aws-sts-helper/issues/5#issuecomment-343071645)). 
+Check the [latest release](https://github.com/nicolas-nannoni/aws-sts-helper/releases/latest).
 
 ## Quick start ##
 Set the following environment variables to the values you use the most:
