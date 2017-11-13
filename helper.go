@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/nicolas-nannoni/aws-sts-helper/config"
 	"github.com/nicolas-nannoni/aws-sts-helper/sts"
 	"github.com/urfave/cli"
