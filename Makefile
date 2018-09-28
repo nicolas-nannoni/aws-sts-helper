@@ -3,10 +3,10 @@
 APP_NAME=aws-sts-helper
 APP_BUILD=`git log --pretty=format:'%h' -n 1`
 
-APP_VERSION=1.2.1
+APP_VERSION=1.3.0
 
 GO_FLAGS= CGO_ENABLED=0
-GO_LDFLAGS= -ldflags="-X main.AppVersion=$(APP_VERSION) -X main.AppName=$(APP_NAME) -X main.AppBuild=$(APP_BUILD)"
+GO_LDFLAGS= -ldflags="-X config.AppVersion=$(APP_VERSION) -X config.AppBuild=$(APP_BUILD)"
 GO_BUILD_CMD=$(GO_FLAGS) go build $(GO_LDFLAGS)
 BUILD_DIR=bin
 BINARY_NAME=aws-sts-helper

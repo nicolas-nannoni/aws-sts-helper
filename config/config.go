@@ -2,16 +2,13 @@ package config
 
 var (
 	Config = &ConfigEntries{}
+
+	// App build information
+	AppVersion string
+	AppBuild   string
 )
 
 type ConfigEntries struct {
-	RoleArn      string
-	MfaArn       string
-	MfaTokenCode string
-
-	HttpPort int
-	HttpPath string
-
 	Debug              bool
 	KeepAwsEnvironment bool
 }
