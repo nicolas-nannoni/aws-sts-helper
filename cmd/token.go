@@ -76,7 +76,7 @@ func newAndServeViaHttpCmd() *cobra.Command {
 
 func (o *GetTokenOptions) applyStandardFlags(cmd *cobra.Command) {
 
-	cmd.PersistentFlags().StringVar(&o.RoleArn, "role-arn", "", "The role ARN (Amazon Resource Name) that you want to assume.")
+	cmd.PersistentFlags().StringVar(&o.RoleArn, "role-arn", "", "The role ARN (Amazon Resource Name) that you want to assume (leave empty to request a session token).")
 	cmd.PersistentFlags().StringVar(&o.MfaArn, "mfa-arn", "", "The MFA (Multi-Factor Authentication) device ARN (Amazon Resource Name) for your account, if applicable.")
 	cmd.PersistentFlags().StringVar(&o.TokenCode, "token-code", "", "The MFA (Multi-Factor Authentication) code given by your MFA device, if applicable.")
 }
