@@ -19,10 +19,17 @@ _cgo_export.*
 
 _testmain.go
 
+vendor/
+vendor.orig/
+build/
+debug*
+mocks/
+
 *.exe
 *.test
 *.prof
 bin/
 
-# Gogland
+# IDE folders
+.vscode
 .idea

@@ -2,6 +2,7 @@ package sts
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"math/rand"
 	"net/http"
 	"os"
@@ -11,14 +12,12 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/segmentio/go-prompt"
+	"github.com/manifoldco/promptui"
 
 	json2 "encoding/json"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/nicolas-nannoni/aws-sts-helper/config"
-	"github.com/urfave/cli"
 )
 
 const (
@@ -35,52 +34,47 @@ var (
 	envAwsVariables = []string{envAwsAccessKeyId, envAwsAccessKey, envAwsSecretAccessKey, envAwsSecretKey, envAwsSessionToken}
 )
 
-func GetTokenAndSetEnvironment(c *cli.Context) error {
+func GetTokenAndSetEnvironment(roleArn, mfaArn, tokenCode string) {
 
-	resp := getToken(c)
+	resp := getToken(roleArn, mfaArn, tokenCode)
 
 	setEnvironmentFromStsReponse(resp)
 	openNewShell()
 
-	return nil
 }
 
-func GetTokenAndReturnExportEnvironment(c *cli.Context) error {
+func GetTokenAndReturnExportEnvironment(roleArn, mfaArn, tokenCode string) {
 
-	resp := getToken(c)
+	resp := getToken(roleArn, mfaArn, tokenCode)
 
-	log.Info("Run this command wrapped in 'eval $(aws-sts-helper get-token ...)' to automatically set your AWS environment variables.")
+	logrus.Info("Run this command wrapped in 'eval $(aws-sts-helper get-token ...)' to automatically set your AWS environment variables.")
 	fmt.Println(getSetEnvironmentString(resp))
 
-	return nil
 }
 
-func GetTokenAndServeOverHttp(c *cli.Context) error {
+func GetTokenAndServeOverHttp(roleArn, mfaArn, tokenCode string, httpPort int, httpPath string) {
 
-	resp := getToken(c)
+	resp := getToken(roleArn, mfaArn, tokenCode)
 
-	startHttpServerWithToken(resp)
-	return nil
+	startHttpServerWithToken(httpPort, httpPath, resp)
 }
 
-func ClearAwsEnvironmentInNewShell(c *cli.Context) error {
+func ClearAwsEnvironmentInNewShell() {
 
 	clearAwsEnvironment()
-	log.Info("AWS environment variables unset")
+	logrus.Info("AWS environment variables unset")
 	openNewShell()
 
-	return nil
 }
 
-func ClearAwsEnvironmentAndReturnUnsetEnvironment(c *cli.Context) error {
+func ClearAwsEnvironmentAndReturnUnsetEnvironment() {
 
-	log.Info("Run this command wrapped in 'eval $(aws-sts-helper clear-environment ...)' to automatically set your AWS environment variables.")
+	logrus.Info("Run this command wrapped in 'eval $(aws-sts-helper clear-environment ...)' to automatically set your AWS environment variables.")
 	fmt.Println(getUnsetEnvironmentString())
 
-	return nil
 }
 
-func getToken(c *cli.Context) *sts.AssumeRoleOutput {
+func getToken(roleArn, mfaArn, tokenCode string) *sts.AssumeRoleOutput {
 
 	if !config.Config.KeepAwsEnvironment {
 		clearAwsEnvironment()
@@ -88,69 +82,78 @@ func getToken(c *cli.Context) *sts.AssumeRoleOutput {
 
 	sess, err := session.NewSession()
 	if err != nil {
-		log.Fatalf("Unable to open an AWS session: %s", err)
+		logrus.Fatalf("unable to open an AWS session: %s", err)
 	}
 
 	svc := sts.New(sess)
 
 	params := &sts.AssumeRoleInput{
-		RoleArn:         aws.String(config.Config.RoleArn),
+		RoleArn:         aws.String(roleArn),
 		RoleSessionName: aws.String(getRandomSessionName()),
 	}
 
-	if config.Config.MfaArn != "" {
-		log.Debugf("Using MFA device with serial %s and token code %s", config.Config.MfaArn, config.Config.MfaTokenCode)
-		params.SerialNumber = aws.String(config.Config.MfaArn)
-		params.TokenCode = aws.String(getMfaToken())
+	if mfaArn != "" {
+		logrus.Debugf("using MFA device with serial %s and token code %s", mfaArn, tokenCode)
+		params.SerialNumber = aws.String(mfaArn)
+		params.TokenCode = aws.String(getMfaToken(tokenCode))
 	}
 	resp, err := svc.AssumeRole(params)
 
 	if err != nil {
-		log.Fatalf("Error while trying to AssumeRole: %s", err.Error())
+		logrus.Fatalf("error while trying to AssumeRole: %s", err.Error())
 	}
 
-	log.Infof("Token successfully received!\n%s", resp.GoString())
+	logrus.Infof("token successfully received!\n%s", resp.GoString())
 
 	return resp
 }
 
-func getMfaToken() string {
+func getMfaToken(givenTokenCode string) string {
 
-	if config.Config.MfaTokenCode != "" {
-		return config.Config.MfaTokenCode
+	if givenTokenCode != "" {
+		return givenTokenCode
 	}
 
-	log.Debugf("No token code passed in command invocation while --mfa-arn is provided: requesting MFA token interactively")
-	return prompt.StringRequired("Please type in your MFA code")
+	logrus.Debugf("no token code passed in command invocation while --mfa-arn is provided: requesting MFA token interactively")
+
+	prompt := promptui.Prompt{
+		Label: "Please type in your MFA code",
+	}
+	token, err := prompt.Run()
+	if err != nil {
+		logrus.Fatalf("error while reading the MFA code: %s", err)
+	}
+
+	return strings.TrimSpace(token)
 }
 
 func clearAwsEnvironment() {
 
-	log.Debugf("Clearing AWS environement variables (%s) from the current environment: %s", envAwsVariables, os.Environ())
+	logrus.Debugf("clearing AWS environment variables (%s) from the current environment: %s", envAwsVariables, os.Environ())
 
 	for _, name := range envAwsVariables {
-		log.Debugf("Clearing %s...", name)
+		logrus.Debugf("clearing %s...", name)
 		os.Unsetenv(name)
 	}
 }
 
 func setEnvironmentFromStsReponse(resp *sts.AssumeRoleOutput) {
 
-	log.Debugf("Setting environment variables (%s, %s, %s) based on STS output: %s", envAwsAccessKeyId, envAwsSecretAccessKey, envAwsSessionToken, resp)
+	logrus.Debugf("setting environment variables (%s, %s, %s) based on STS output: %s", envAwsAccessKeyId, envAwsSecretAccessKey, envAwsSessionToken, resp)
 
 	setEnvironmentVariable(envAwsAccessKeyId, *resp.Credentials.AccessKeyId)
 	setEnvironmentVariable(envAwsSecretAccessKey, *resp.Credentials.SecretAccessKey)
 	setEnvironmentVariable(envAwsSessionToken, *resp.Credentials.SessionToken)
 
-	log.Debugf("Environment: %s", os.Environ())
+	logrus.Debugf("Environment: %s", os.Environ())
 }
 
 func setEnvironmentVariable(key string, value string) {
 
-	log.Debugf("Setting environment variable %s to %s", key, value)
+	logrus.Debugf("setting environment variable %s to %s", key, value)
 	err := os.Setenv(key, value)
 	if err != nil {
-		log.Fatalf("Error while setting environment variable %s: %s", key, err)
+		logrus.Fatalf("error while setting environment variable %s: %s", key, err)
 	}
 }
 
@@ -190,7 +193,7 @@ func openNewShell() {
 	syscall.Exec(os.Getenv("SHELL"), []string{os.Getenv("SHELL")}, syscall.Environ())
 }
 
-func startHttpServerWithToken(token *sts.AssumeRoleOutput) error {
+func startHttpServerWithToken(httpPort int, httpPath string, token *sts.AssumeRoleOutput) error {
 
 	iamBody := IamRoleResponse{
 		Code:            "Success",
@@ -204,13 +207,13 @@ func startHttpServerWithToken(token *sts.AssumeRoleOutput) error {
 
 	json, err := json2.Marshal(iamBody)
 	if err != nil {
-		return fmt.Errorf("Unable to convert the STS credentials into a JSON EC2 IAM Role output: %s", err)
+		return fmt.Errorf("unable to convert the STS credentials into a JSON EC2 IAM Role output: %s", err)
 	}
 
-	log.Infof("Starting server on port %d, exposing credentials at %s", config.Config.HttpPort, config.Config.HttpPath)
+	logrus.Infof("Starting server on port %d, exposing credentials at %s", httpPort, httpPath)
 
-	http.HandleFunc(config.Config.HttpPath, serveCredentials(json))
-	http.ListenAndServe(fmt.Sprintf("localhost:%d", config.Config.HttpPort), nil)
+	http.HandleFunc(httpPath, serveCredentials(json))
+	http.ListenAndServe(fmt.Sprintf("localhost:%d", httpPort), nil)
 
 	return nil
 }
@@ -219,8 +222,8 @@ func serveCredentials(jsonIamBody []byte) (func(http.ResponseWriter, *http.Reque
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		log.Infof("Received credentials request: %s", r.UserAgent())
-		log.Debugf("Received request: %s", *r)
+		logrus.Infof("Received credentials request: %s", r.UserAgent())
+		logrus.Debugf("received request: %s", *r)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(jsonIamBody)

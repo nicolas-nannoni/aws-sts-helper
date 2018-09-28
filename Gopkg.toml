@@ -1,0 +1,20 @@
+[[constraint]]
+  name = "github.com/aws/aws-sdk-go"
+  version = "v1.15.40"
+
+[[constraint]]
+  name = "github.com/manifoldco/promptui"
+  version = "v0.3.1"
+
+[[constraint]]
+  name = "github.com/sirupsen/logrus"
+  version = "1.0.6"
+
+[[constraint]]
+  name = "github.com/spf13/cobra"
+  branch = "master"
+
+[prune]
+  go-tests = true
+  unused-packages = true
+  non-go = true
