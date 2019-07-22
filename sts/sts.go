@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -60,7 +61,7 @@ func GetTokenAndReturnExportEnvironment(roleArn, mfaArn, tokenCode string) {
 		credentials = resp.Credentials
 	}
 
-	logrus.Info("Run this command wrapped in 'eval $(aws-sts-helper get-token ...)' to automatically set your AWS environment variables.")
+	logrus.Info("Run this command wrapped in 'eval $(" + filepath.Base(os.Args[0]) + " get-token ...)' to automatically set your AWS environment variables.")
 	fmt.Println(getSetEnvironmentStringFromCredentials(credentials))
 }
 
@@ -88,7 +89,7 @@ func ClearAwsEnvironmentInNewShell() {
 
 func ClearAwsEnvironmentAndReturnUnsetEnvironment() {
 
-	logrus.Info("Run this command wrapped in 'eval $(aws-sts-helper clear-environment ...)' to automatically set your AWS environment variables.")
+	logrus.Info("Run this command wrapped in 'eval $(" + filepath.Base(os.Args[0]) + " clear-environment ...)' to automatically set your AWS environment variables.")
 	fmt.Println(getUnsetEnvironmentString())
 
 }
@@ -236,7 +237,7 @@ func getRandomSessionName() string {
 	for i := 0; i < randomSessionNameLength; i++ {
 		result[i] = chars[rand.Intn(len(chars))]
 	}
-	return fmt.Sprintf("aws-sts-helper-%s", string(result))
+	return fmt.Sprintf("%s-%s", filepath.Base(os.Args[0]), string(result))
 }
 
 func openNewShell() {

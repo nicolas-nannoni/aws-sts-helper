@@ -5,13 +5,15 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"time"
 )
 
 func NewRootCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:     "aws-sts-helper <command>",
+		Use:     filepath.Base(os.Args[0]) + " <command>",
 		Short:   "Tool to make your life easier when using Amazon STS (Security Token Service).",
 		Version: config.AppVersion + " (build " + config.AppBuild + ")",
 
