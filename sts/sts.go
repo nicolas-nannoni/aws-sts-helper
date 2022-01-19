@@ -1,8 +1,9 @@
 package sts
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"math/rand"
 	"net/http"
 	"os"
@@ -10,14 +11,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/sts/types"
+	conf "github.com/nicolas-nannoni/aws-sts-helper/config"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/manifoldco/promptui"
-
-	json2 "encoding/json"
-
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/nicolas-nannoni/aws-sts-helper/config"
 )
 
 const (
@@ -34,14 +36,14 @@ var (
 	envAwsVariables = []string{envAwsAccessKeyId, envAwsAccessKey, envAwsSecretAccessKey, envAwsSecretKey, envAwsSessionToken}
 )
 
-func GetTokenAndSetEnvironment(roleArn, mfaArn, tokenCode string) {
+func GetTokenAndSetEnvironment(ctx context.Context, roleArn, mfaArn, tokenCode string) {
 
-	var credentials *sts.Credentials
+	var credentials *types.Credentials
 	if roleArn == "" {
-		resp := getSessionToken(mfaArn, tokenCode)
+		resp := getSessionToken(ctx, mfaArn, tokenCode)
 		credentials = resp.Credentials
 	} else {
-		resp := getToken(roleArn, mfaArn, tokenCode)
+		resp := getToken(ctx, roleArn, mfaArn, tokenCode)
 		credentials = resp.Credentials
 	}
 
@@ -49,14 +51,14 @@ func GetTokenAndSetEnvironment(roleArn, mfaArn, tokenCode string) {
 	openNewShell()
 }
 
-func GetTokenAndReturnExportEnvironment(roleArn, mfaArn, tokenCode string) {
+func GetTokenAndReturnExportEnvironment(ctx context.Context, roleArn, mfaArn, tokenCode string) {
 
-	var credentials *sts.Credentials
+	var credentials *types.Credentials
 	if roleArn == "" {
-		resp := getSessionToken(mfaArn, tokenCode)
+		resp := getSessionToken(ctx, mfaArn, tokenCode)
 		credentials = resp.Credentials
 	} else {
-		resp := getToken(roleArn, mfaArn, tokenCode)
+		resp := getToken(ctx, roleArn, mfaArn, tokenCode)
 		credentials = resp.Credentials
 	}
 
@@ -64,14 +66,28 @@ func GetTokenAndReturnExportEnvironment(roleArn, mfaArn, tokenCode string) {
 	fmt.Println(getSetEnvironmentStringFromCredentials(credentials))
 }
 
-func GetTokenAndServeOverHttp(roleArn, mfaArn, tokenCode string, httpPort int, httpPath string) {
+func GetTokenAndReturnEnvironment(ctx context.Context, roleArn, mfaArn, tokenCode string) {
 
-	var credentials *sts.Credentials
+	var credentials *types.Credentials
 	if roleArn == "" {
-		resp := getSessionToken(mfaArn, tokenCode)
+		resp := getSessionToken(ctx, mfaArn, tokenCode)
 		credentials = resp.Credentials
 	} else {
-		resp := getToken(roleArn, mfaArn, tokenCode)
+		resp := getToken(ctx, roleArn, mfaArn, tokenCode)
+		credentials = resp.Credentials
+	}
+
+	fmt.Println(getEnvironmentStringFromCredentials(credentials))
+}
+
+func GetTokenAndServeOverHttp(ctx context.Context, roleArn, mfaArn, tokenCode string, httpPort int, httpPath string) {
+
+	var credentials *types.Credentials
+	if roleArn == "" {
+		resp := getSessionToken(ctx, mfaArn, tokenCode)
+		credentials = resp.Credentials
+	} else {
+		resp := getToken(ctx, roleArn, mfaArn, tokenCode)
 		credentials = resp.Credentials
 	}
 
@@ -93,67 +109,77 @@ func ClearAwsEnvironmentAndReturnUnsetEnvironment() {
 
 }
 
-func getSessionToken(mfaArn, tokenCode string) *sts.GetSessionTokenOutput {
+func getSessionToken(ctx context.Context, mfaArn, tokenCode string) *sts.GetSessionTokenOutput {
 
-	if !config.Config.KeepAwsEnvironment {
+	if !conf.Config.KeepAwsEnvironment {
 		clearAwsEnvironment()
 	}
 
-	sess, err := session.NewSession()
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-west-2"))
 	if err != nil {
-		logrus.Fatalf("unable to open an AWS session: %s", err)
+		logrus.Fatalf("unable to get the AWS configuration: %s", err)
 	}
 
-	svc := sts.New(sess)
+	svc := sts.NewFromConfig(cfg)
 
-	params := &sts.GetSessionTokenInput{}
+	req := &sts.GetSessionTokenInput{}
 
 	if mfaArn != "" {
 		logrus.Debugf("using MFA device with serial %s and token code %s", mfaArn, tokenCode)
-		params.SerialNumber = aws.String(mfaArn)
-		params.TokenCode = aws.String(getMfaToken(tokenCode))
+		req.SerialNumber = aws.String(mfaArn)
+		req.TokenCode = aws.String(getMfaToken(tokenCode))
 	}
-	resp, err := svc.GetSessionToken(params)
+	resp, err := svc.GetSessionToken(ctx, req)
 
 	if err != nil {
 		logrus.Fatalf("error while trying to GetSessionToken: %s", err.Error())
 	}
 
-	logrus.Infof("session token successfully received!\n%s", resp.GoString())
+	b, err := json.MarshalIndent(resp, "", " ")
+	if err != nil {
+		logrus.Fatalf("error while trying to marshall the response from the GetSessionToken call: %s", err.Error())
+	}
+
+	logrus.Infof("session token successfully received!\n%s", string(b))
 
 	return resp
 }
 
-func getToken(roleArn, mfaArn, tokenCode string) *sts.AssumeRoleOutput {
+func getToken(ctx context.Context, roleArn, mfaArn, tokenCode string) *sts.AssumeRoleOutput {
 
-	if !config.Config.KeepAwsEnvironment {
+	if !conf.Config.KeepAwsEnvironment {
 		clearAwsEnvironment()
 	}
 
-	sess, err := session.NewSession()
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-west-2"))
 	if err != nil {
-		logrus.Fatalf("unable to open an AWS session: %s", err)
+		logrus.Fatalf("unable to get the AWS configuration: %s", err)
 	}
 
-	svc := sts.New(sess)
+	svc := sts.NewFromConfig(cfg)
 
-	params := &sts.AssumeRoleInput{
+	req := &sts.AssumeRoleInput{
 		RoleArn:         aws.String(roleArn),
 		RoleSessionName: aws.String(getRandomSessionName()),
 	}
 
 	if mfaArn != "" {
 		logrus.Debugf("using MFA device with serial %s and token code %s", mfaArn, tokenCode)
-		params.SerialNumber = aws.String(mfaArn)
-		params.TokenCode = aws.String(getMfaToken(tokenCode))
+		req.SerialNumber = aws.String(mfaArn)
+		req.TokenCode = aws.String(getMfaToken(tokenCode))
 	}
-	resp, err := svc.AssumeRole(params)
+	resp, err := svc.AssumeRole(ctx, req)
 
 	if err != nil {
 		logrus.Fatalf("error while trying to AssumeRole: %s", err.Error())
 	}
 
-	logrus.Infof("token successfully received!\n%s", resp.GoString())
+	b, err := json.MarshalIndent(resp, "", " ")
+	if err != nil {
+		logrus.Fatalf("error while trying to marshall the response from the AssumeRole call: %s", err.Error())
+	}
+
+	logrus.Infof("token successfully received!\n%s", string(b))
 
 	return resp
 }
@@ -187,7 +213,7 @@ func clearAwsEnvironment() {
 	}
 }
 
-func setEnvironmentFromStsCredentials(credentials *sts.Credentials) {
+func setEnvironmentFromStsCredentials(credentials *types.Credentials) {
 
 	logrus.Debugf("setting environment variables (%s, %s, %s) based on STS output: %s", envAwsAccessKeyId, envAwsSecretAccessKey, envAwsSessionToken, credentials)
 
@@ -207,7 +233,7 @@ func setEnvironmentVariable(key string, value string) {
 	}
 }
 
-func getSetEnvironmentStringFromCredentials(credentials *sts.Credentials) string {
+func getSetEnvironmentStringFromCredentials(credentials *types.Credentials) string {
 
 	setCmds := make([]string, 3)
 	setCmds = append(setCmds, getExportEnvironmentString(envAwsAccessKeyId, *credentials.AccessKeyId))
@@ -216,8 +242,21 @@ func getSetEnvironmentStringFromCredentials(credentials *sts.Credentials) string
 	return strings.Join(setCmds, "\n")
 }
 
+func getEnvironmentStringFromCredentials(credentials *types.Credentials) string {
+
+	setCmds := make([]string, 3)
+	setCmds = append(setCmds, getEnvironmentString(envAwsAccessKeyId, *credentials.AccessKeyId))
+	setCmds = append(setCmds, getEnvironmentString(envAwsSecretAccessKey, *credentials.SecretAccessKey))
+	setCmds = append(setCmds, getEnvironmentString(envAwsSessionToken, *credentials.SessionToken))
+	return strings.Join(setCmds, "\n")
+}
+
 func getExportEnvironmentString(key string, value string) string {
 	return fmt.Sprintf("export %s=%s", key, value)
+}
+
+func getEnvironmentString(key string, value string) string {
+	return fmt.Sprintf("%s=%s", key, value)
 }
 
 func getUnsetEnvironmentString() string {
@@ -243,7 +282,7 @@ func openNewShell() {
 	syscall.Exec(os.Getenv("SHELL"), []string{os.Getenv("SHELL")}, syscall.Environ())
 }
 
-func startHttpServerWithCredentials(httpPort int, httpPath string, credentials *sts.Credentials) error {
+func startHttpServerWithCredentials(httpPort int, httpPath string, credentials *types.Credentials) error {
 
 	iamBody := IamRoleResponse{
 		Code:            "Success",
@@ -255,7 +294,7 @@ func startHttpServerWithCredentials(httpPort int, httpPath string, credentials *
 		Expiration:      (*credentials.Expiration).Format(time.RFC3339),
 	}
 
-	json, err := json2.Marshal(iamBody)
+	json, err := json.Marshal(iamBody)
 	if err != nil {
 		return fmt.Errorf("unable to convert the STS credentials into a JSON EC2 IAM Role output: %s", err)
 	}
@@ -268,7 +307,7 @@ func startHttpServerWithCredentials(httpPort int, httpPath string, credentials *
 	return nil
 }
 
-func serveCredentials(jsonIamBody []byte) (func(http.ResponseWriter, *http.Request)) {
+func serveCredentials(jsonIamBody []byte) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 

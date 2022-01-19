@@ -24,6 +24,7 @@ func NewGetTokenCmd() *cobra.Command {
 	cmd.AddCommand(newInNewShellCmd())
 	cmd.AddCommand(newAndShowExportCmd())
 	cmd.AddCommand(newAndServeViaHttpCmd())
+	cmd.AddCommand(newAndShowEnvCmd())
 
 	return cmd
 }
@@ -50,6 +51,20 @@ func newAndShowExportCmd() *cobra.Command {
 		Use:   "and-show-export",
 		Short: "Get new temporary STS credentials and print out the environment variable 'export' commands to use them.",
 		Run:   o.AndShowExport,
+	}
+	o.applyStandardFlags(cmd)
+
+	return cmd
+}
+
+func newAndShowEnvCmd() *cobra.Command {
+
+	o := GetTokenOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "and-show-environment",
+		Short: "Get new temporary STS credentials and print out the environment variables to use them.",
+		Run:   o.AndShowEnv,
 	}
 	o.applyStandardFlags(cmd)
 
@@ -83,15 +98,20 @@ func (o *GetTokenOptions) applyStandardFlags(cmd *cobra.Command) {
 
 func (o *GetTokenOptions) InNewShell(cmd *cobra.Command, args []string) {
 
-	sts.GetTokenAndSetEnvironment(o.RoleArn, o.MfaArn, o.TokenCode)
+	sts.GetTokenAndSetEnvironment(cmd.Context(), o.RoleArn, o.MfaArn, o.TokenCode)
 }
 
 func (o *GetTokenOptions) AndShowExport(cmd *cobra.Command, args []string) {
 
-	sts.GetTokenAndReturnExportEnvironment(o.RoleArn, o.MfaArn, o.TokenCode)
+	sts.GetTokenAndReturnExportEnvironment(cmd.Context(), o.RoleArn, o.MfaArn, o.TokenCode)
+}
+
+func (o *GetTokenOptions) AndShowEnv(cmd *cobra.Command, args []string) {
+
+	sts.GetTokenAndReturnEnvironment(cmd.Context(), o.RoleArn, o.MfaArn, o.TokenCode)
 }
 
 func (o *GetTokenOptions) AndServeViaHttp(cmd *cobra.Command, args []string) {
 
-	sts.GetTokenAndServeOverHttp(o.RoleArn, o.MfaArn, o.TokenCode, o.HttpPort, o.HttpPath)
+	sts.GetTokenAndServeOverHttp(cmd.Context(), o.RoleArn, o.MfaArn, o.TokenCode, o.HttpPort, o.HttpPath)
 }
