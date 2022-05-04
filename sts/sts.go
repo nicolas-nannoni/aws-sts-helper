@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"math/rand"
 	"net/http"
 	"os"
@@ -18,7 +19,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/manifoldco/promptui"
 )
 
