@@ -3,7 +3,7 @@
 APP_NAME=aws-sts-helper
 APP_BUILD=`git log --pretty=format:'%h' -n 1`
 
-APP_VERSION=1.4.0
+APP_VERSION=1.5.0
 
 GO_FLAGS= CGO_ENABLED=0
 GO_LDFLAGS= -ldflags="-X 'github.com/nicolas-nannoni/aws-sts-helper/config.AppVersion=$(APP_VERSION)' -X 'github.com/nicolas-nannoni/aws-sts-helper/config.AppBuild=$(APP_BUILD)'"
